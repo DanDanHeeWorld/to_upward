@@ -12,8 +12,8 @@ import sympy
 from plotly.subplots import make_subplots
 import random
 import os
-import warnings
-warnings.filterwarnings('ignore')
+# import warnings
+# warnings.filterwarnings('ignore')
 
 # 시드 및 경로 설정
 def reset_seeds(seed):
@@ -29,13 +29,39 @@ SEED = 42
 data = pd.read_csv(f"{DATA_PATH}labeled_data_final.csv")
 
 
-# 종료일 및 시작일
+# 마감일 및 시작일
 end = dt.datetime.today().date().strftime("%Y%m%d")
 start = (dt.datetime.today().date() - dt.timedelta(365)).strftime("%Y%m%d")
 
-
 # 종가 데이터 불러오기
-tmp = pd.read_csv(f"{DATA_PATH}test_stock2.csv", index_col=0, parse_dates=True) # 인덱스를 날짜로 불러오기 
+# tmp = pd.read_csv(f"{DATA_PATH}test_stock2.csv", index_col=0, parse_dates=True) # 인덱스를 날짜로 불러오기 
+
+# 오류 방지를 위한 패딩 함수
+def pad_str(str_list, target_len):
+
+  padded_str_list = []
+  for str in str_list:
+    if len(str) < target_len:
+      padded_str = "0" * (target_len - len(str)) + str
+    else:
+      padded_str = str
+    padded_str_list.append(padded_str)
+  return padded_str_list
+str_list = data.Code.astype(str).to_list()
+target_len = 6
+padded_str_list = pad_str(str_list, target_len)
+
+data.Code = padded_str_list
+
+# 종가를 가져올 주식 목록
+stocks = data['Name'] # 전체 선택
+
+# pykrx에서 종가 데이터 가져오기
+tmp = pd.DataFrame()
+for n in stocks:
+    tmp[n] = stock.get_market_ohlcv(start, end, data[data['Name'] == n]['Code'])['종가']
+
+
 
 # sector 기준
 dividend = ['dividendYield','dividendRate','5년평균dividendYield']
@@ -48,13 +74,81 @@ volitality = ['marketCap','currentPrice','fiftyDayAverage','twoHundredDayAverage
 
 
 
-
 # 메인화면에 표시할 부분 (st.)
 st.title('투자성향에 맞는 포트폴리오 추천')
 st.divider()
 
+
 # <<<<< 사이드바 >>>>>
 st.sidebar.title('포트폴리오 선택')
+
+
+# 주식 섹터에 대한 설명
+# 세션 상태 초기화
+def init():
+    if 'show_description' not in st.session_state:
+        st.session_state.show_description = False
+
+init()
+
+# 위젯으로 "주식 섹터에 대한 설명" 보기/숨기기
+if st.sidebar.checkbox('주식 섹터에 대한 설명 보기', help='클릭 시 설명을 확인할 수 있습니다.'):
+    st.session_state.show_description = True
+else:
+    st.session_state.show_description = False
+
+# "주식 섹터에 대한 설명"이 True면 내용을 표시
+if st.session_state.show_description:
+    st.write("### 주식 섹터에 대한 설명")
+
+    st.write("#### 배당 (Dividend)")
+    if st.button('더 보기', key='dividend'):
+        st.write("""
+        **설명**: 주식회사가 주주에게 이익을 나눠주는 것을 의미합니다. 배당률이 높은 주식은 안정적인 수익을 기대할 수 있습니다.\n
+        **예시**: 대한민국에서는 삼성전자, SK텔레콤 등이 배당률이 높은 주식으로 알려져 있습니다.
+        """)
+
+    st.write("#### 성장 (Growth)")
+    if st.button('더 보기', key='growth'):
+        st.write("""
+        **설명**: 회사의 매출이나 이익이 지속적으로 증가하는지를 살펴보는 지표입니다. 성장률이 높은 주식은 높은 수익률을 기대할 수 있습니다.\n
+        **예시**: NAVER, 카카오 등은 지속적인 성장을 보이는 주식입니다.
+        """)    
+
+    st.write("#### 가치 (Value)")
+    if st.button('더 보기', key='value'):
+        st.write("""
+        **설명**: 주식의 현재 가격이 그 실제 가치에 비해 얼마나 저렴한지를 평가하는 지표입니다. P/E 비율, P/B 비율 등을 통해 측정합니다.\n
+        **예시**: POSCO, 현대차 등은 가치 투자의 대상으로 여겨지는 경우가 많습니다.
+        """)    
+
+    st.write("#### 경영 (Business)")
+    if st.button('더 보기', key='business'):
+        st.write("""
+        **설명**: 회사의 경영 성과를 평가하는 지표입니다. 영업이익률, 순이익률 등을 통해 회사의 경영 상태를 파악합니다.\n
+        **예시**: 삼성바이오로직스, 셀트리온 등은 높은 영업이익률을 가진 회사입니다.
+        """)    
+
+    st.write("#### 재무 (Finance)")
+    if st.button('더 보기', key='finance'):
+        st.write("""
+        **설명**: 회사의 재무 상태를 평가하는 지표입니다. 부채비율, 유동비율 등을 통해 회사의 재무 안정성을 측정합니다.\n
+        **예시**: 삼성SDI, LG화학 등은 재무상태가 안정적인 회사로 알려져 있습니다.
+        """)    
+
+    st.write("#### 실적 (Performance)")
+    if st.button('더 보기', key='performance'):
+        st.write("""
+        **설명**: 회사의 경영 실적을 평가하는 지표입니다. 매출, 이익, EBITDA 등을 통해 회사의 경영 성과를 측정합니다.\n
+        **예시**: 삼성전자, SK하이닉스 등은 높은 매출과 이익을 보이는 회사입니다.
+        """)    
+
+    st.write("#### 변동성 (Volatility)")
+    if st.button('더 보기', key='volatility'):
+        st.write("""
+        **설명**: 주식 가격의 변동 폭을 의미합니다. 변동성이 높은 주식은 높은 수익, 높은 리스크를 가질 수 있습니다.\n
+        **예시**: 바이오 관련 주식이나 새로운 기술을 개발한 스타트업 주식 등은 변동성이 높은 경우가 많습니다.
+        """)    
 
 # 사이드바에서 투자 성향 선택
 selected_item = st.sidebar.radio("(1) 당신의 투자 성향을 선택하세요:", ('안정형', '중립형', '수익형'))
@@ -62,7 +156,8 @@ selected_item = st.sidebar.radio("(1) 당신의 투자 성향을 선택하세요
 # 투자 성향에 따른 포트폴리오 제공
 # 1.원하는 기업 하나 선택(소비자가 선택하지 않으면 어려운 숙제)
 # 2.그대로 활용 vs 기대수익에 맞게 구성
-# 3.고객이 잘못된 정보를 입력했을 때 오류메세지 처리하기
+# 3.섹터를 선택하지 않았을 때 오류메세지 문제(해결완료)
+# 4.안정형을 먼저 완성하고 반복문에 코드를 수정하여 중립형과 수익형 코드 작성
 
 
 # 라벨링 기준에 따른 분류
@@ -76,191 +171,186 @@ labelling = {
     'volitality': ['A+', 'A', 'B', 'C']
 }
 
+
 if selected_item == "안정형":
-    multi_select = st.sidebar.multiselect('Sector 3가지를 선택하세요', list(labelling.keys()), max_selections=3, placeholder='sector를 선택하세요.') 
+    selected_stock = [] # 변수 초기화
+    tmp_stock = pd.DataFrame()  # 변수 초기화
+
+    multi_select = st.sidebar.multiselect('Sector를 2개 이상 선택하세요', list(labelling.keys()), max_selections=3, placeholder='Sector를 선택하세요.') 
 
     # multi_select 조건문
-    st.write('당신의 선택:', multi_select)
+    st.write('선택한 Sector:', multi_select)
 
-    conditions = []
-    for idx, selected in enumerate(multi_select):
-        condition = data[selected].isin(labelling[selected])
-        conditions.append(condition)
-
-    recommendation = data[np.logical_and.reduce(conditions)] # 여러 조건을 동시에 만족하는 경우
-    selected_stock = recommendation["Name"].to_list()
-    tmp_stock = tmp[selected_stock]
-
-    st.write('추천 종목:', selected_stock)
-
-
-
-    selected_stock = st.sidebar.selectbox("목록 중 원하는 기업을 선택하세요.", selected_stock)
-    
-    # selected_stock = st.sidebar.text_input('원하는 기업 선택', '삼성전자') # 원하는 기업을 먼저 선택할 수 있게??
-    # 선택한 기업 + 상관계수 상위 4개 기업
-    stocks = list(tmp_stock.corr()[[selected_stock]].sort_values(by=selected_stock)[:4].index)+[selected_stock] # 상위 4개 선정
-    st.write('선택된 기업과 상위 4개의 기업 포트폴리오')
-    st.dataframe(stocks)
-
-    daily_ret = tmp[stocks].pct_change()
-    annual_ret = daily_ret.mean() * tmp[stocks].shape[0]
-
-    daily_cov = daily_ret.cov()
-    annual_cov = daily_cov * tmp[stocks].shape[0]
-
-
-
-    # 포트폴리오 시각화
-    port_ret = []
-    port_risk = []
-    port_weights = []
-    shape_ratio = []
-    rf = 0.0325
-
-    for i in range(30000):
-
-        weights = np.random.random(len(stocks))
-        weights /= np.sum(weights)
-
-
-        returns = np.dot(weights, annual_ret)
-
-
-        risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
-
-        port_ret.append(returns)
-        port_risk.append(risk)
-        port_weights.append(weights)
-        shape_ratio.append(returns/risk)
-
-    portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
-    for j, s in enumerate(stocks):
-        portfolio[s] = [weight[j] for weight in port_weights]
-
-    df = pd.DataFrame(portfolio)
-    max_shape = df.loc[df['Shape'] == df['Shape'].max()]
-    min_risk = df.loc[df['Risk'] == df['Risk'].min()]
-    tmp2 = df.groupby('Risk')[['Returns']].max().reset_index()
-
-    # best_ret = tmp2.loc[0,'Returns']
-    # for i in range(tmp2.shape[0]):
-    #     if tmp2.loc[i,'Returns']<best_ret:
-    #         tmp2.drop(index=i,inplace=True)
-    # else:
-    #     best_ret = tmp2.loc[i,'Returns']
-
-    best_ret = tmp2.loc[0,'Returns']
-    for i in range(tmp2.shape[0]):
-        if tmp2.loc[i,'Returns'] < best_ret:
-            tmp2.drop(index=i, inplace=True)
-        # else로 할 경우 i 값은 for 루프의 마지막 값을 가지게 되며, 그 값이 tmp2 데이터프레임에 존재하지 않을 경우 KeyError가 발생
-        elif tmp2.loc[i,'Returns'] >= best_ret: 
-            best_ret = tmp2.loc[i,'Returns']
-
-    fig = go.Figure()
-
-
-    fig.add_trace(go.Scatter(x=df['Risk'], y=df['Returns'], mode='markers',name='Portfolio',marker=dict(
-            size=5,    # 점 크기
-            color=df['Shape'],
-            colorscale = 'earth',
-            showscale=True,  # colorscales 보여줌
-            colorbar={"title": "Shape"},
-            line_width=1, # 마커 라인 두께 설정
-    )))
-
-
-    fig.add_trace(go.Scatter(x=tmp2['Risk'], y=tmp2['Returns'],name='Efficient Frontier',line_width=5,mode='lines'))
-
-    fig.add_trace(go.Scatter(x=max_shape['Risk'],y=max_shape['Returns'], mode='markers',name='Max_Shape',marker=dict(size =20,symbol='star')))
-    fig.add_trace(go.Scatter(x=min_risk['Risk'],y=min_risk['Returns'], mode='markers',name='Min_risk',marker=dict(size =20,symbol='star')))
-
-    fig.add_trace(go.Scatter(x=[0,max_shape['Risk'].iloc[0],0.5], y=[rf,max_shape['Returns'].iloc[0],(max_shape['Returns'].iloc[0] - rf)/max_shape['Risk'].iloc[0]*0.5+rf],name='New EF',line_width=5,mode='lines'))
-
-    fig.update_layout(title='Efficient Frontier Graph',
-                    xaxis_title='Risk',
-                    yaxis_title='Expected Return')
-
-    fig.update_layout(legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="left",
-        x=0.05
-    ))
-
-    # 그래프 출력
-    st.plotly_chart(fig) # fig.show()대신 이 코드로 출력
-
-    # max_shape, min_risk 데이터프레임으로 보여주기
-    st.write('max_shape')
-    st.dataframe(max_shape)
-    st.write('min_risk')
-    st.dataframe(min_risk)
-
-
-
-
-    # 원하는 기대 수익은 얼마인가?
-    exp_ret = st.sidebar.slider('원하는 기대 수익', min_value=0.0, max_value=15.0, step=0.1)
-
-    w = sympy.Symbol('w')
-
-    equation = w*0.02 + (1-w)*max_shape['Returns'].values[0] - exp_ret
-
-    solution = sympy.solve(equation, w)
-    solution = float(solution[0])
-
-    st.write(f"채권의 비중 : {solution}")
-    st.write(f"이 경우 Risk : {(1-solution)*max_shape['Risk'].iloc[0]}")
-
-
-    # 수평선 표시
-    st.divider()
-
-    if solution >= 0:
+    if multi_select:
+        conditions = [] # 변수 초기화
+        for idx, selected in enumerate(multi_select):
+            condition = data[selected].isin(labelling[selected])
+            conditions.append(condition)
         
-        fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", "<b>기대수익을 위한 포트폴리오"))
+        if conditions:
+            recommendation = data[np.logical_and.reduce(conditions)] # and 조건 / or 조건 사용 시 변경하기
+            selected_stock = recommendation["Name"].to_list()
+            tmp_stock = tmp[selected_stock]
+            st.write('추천 종목:', selected_stock)
+
+        # 포트폴리오 시각화 코드 시작
+        if selected_stock:
+            selected_stock = st.sidebar.selectbox("목록 중 원하는 기업을 선택하세요.", selected_stock)
+
+            if selected_stock in tmp_stock.columns:
+                stocks = list(tmp_stock.corr()[[selected_stock]].sort_values(by=selected_stock)[:4].index)+[selected_stock] # 상위 4개 선정
+                st.write('선택된 기업과 상위 4개의 기업 포트폴리오')
+                st.dataframe(stocks)
+
+                # 수익률과 공분산 구하기
+                daily_ret = tmp[stocks].pct_change()
+                annual_ret = (1+daily_ret.mean())**tmp[stocks].shape[0]-1
+                daily_cov = daily_ret.cov()
+                annual_cov = daily_cov * tmp[stocks].shape[0]
 
 
-        fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-3:]),
-            labels=list(max_shape.columns[-3:]),
-            domain=dict(x=[0, 0.5]),
-            name="GHG Emissions"),
-            row=1, col=1)
+                # 포트폴리오 시각화
+                port_ret = []
+                port_risk = []
+                port_weights = []
+                shape_ratio = []
+                rf = 0.0325
 
-        fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-3:]* (1-float(solution)))+[float(solution)] ,
-            labels=list(max_shape.columns[-3:]) + ['채권'],
-            domain=dict(x=[0.5, 1.0]),
-            name="CO2 Emissions"),
-            row=1, col=2)
+                for i in range(30000):
 
-        # 그래프 출력
-        st.plotly_chart(fig)
+                    weights = np.random.random(len(stocks))
+                    weights /= np.sum(weights)
 
+
+                    returns = np.dot(weights, annual_ret)
+
+
+                    risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
+
+                    port_ret.append(returns)
+                    port_risk.append(risk)
+                    port_weights.append(weights)
+                    shape_ratio.append(returns/risk)
+
+                portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
+                for j, s in enumerate(stocks):
+                    portfolio[s] = [weight[j] for weight in port_weights]
+
+                df = pd.DataFrame(portfolio)
+                max_shape = df.loc[df['Shape'] == df['Shape'].max()]
+                min_risk = df.loc[df['Risk'] == df['Risk'].min()]
+                tmp2 = df.groupby('Risk')[['Returns']].max().reset_index()
+
+                best_ret = tmp2.loc[0,'Returns']
+                for i in range(tmp2.shape[0]):
+                    if tmp2.loc[i,'Returns'] < best_ret:
+                        tmp2.drop(index=i, inplace=True)
+                    # else로 할 경우 i 값은 for 루프의 마지막 값을 가지게 되며, 그 값이 tmp2 데이터프레임에 존재하지 않을 경우 KeyError가 발생
+                    elif tmp2.loc[i,'Returns'] >= best_ret: 
+                        best_ret = tmp2.loc[i,'Returns']
+
+                fig = go.Figure()
+
+
+                fig.add_trace(go.Scatter(x=df['Risk'], y=df['Returns'], mode='markers',name='Portfolio',marker=dict(
+                        size=5,    # 점 크기
+                        color=df['Shape'],
+                        colorscale = 'earth',
+                        showscale=True,  # colorscales 보여줌
+                        colorbar={"title": "Shape"},
+                        line_width=1, # 마커 라인 두께 설정
+                )))
+
+
+                fig.add_trace(go.Scatter(x=tmp2['Risk'], y=tmp2['Returns'],name='Efficient Frontier',line_width=5,mode='lines'))
+
+                fig.add_trace(go.Scatter(x=max_shape['Risk'],y=max_shape['Returns'], mode='markers',name='Max_Shape',marker=dict(size =20,symbol='star')))
+                fig.add_trace(go.Scatter(x=min_risk['Risk'],y=min_risk['Returns'], mode='markers',name='Min_risk',marker=dict(size =20,symbol='star')))
+
+                fig.add_trace(go.Scatter(x=[0,max_shape['Risk'].iloc[0],0.5], y=[rf,max_shape['Returns'].iloc[0],(max_shape['Returns'].iloc[0] - rf)/max_shape['Risk'].iloc[0]*0.5+rf],name='New EF',line_width=5,mode='lines'))
+
+                fig.update_layout(title='Efficient Frontier Graph',
+                                xaxis_title='Risk',
+                                yaxis_title='Expected Return')
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="left",
+                    x=0.05
+                ))
+
+                # 그래프 출력
+                st.plotly_chart(fig) # fig.show()대신 이 코드로 출력
+
+                # max_shape, min_risk 데이터프레임으로 보여주기
+                st.write('max_shape')
+                st.dataframe(max_shape)
+                st.write('min_risk')
+                st.dataframe(min_risk)
+
+                # 기대 수익 포트폴리오
+                # 원하는 기대 수익은 얼마인가?
+                exp_ret = st.sidebar.slider('원하는 기대 수익', min_value=0.0, max_value=15.0, step=0.1)
+
+                w = sympy.Symbol('w') #
+
+                equation = w*0.02 + (1-w)*max_shape['Returns'].values[0] - exp_ret
+
+                solution = sympy.solve(equation, w)
+                solution = float(solution[0])
+
+
+                # 수평선 표시
+                st.divider()
+
+                if solution >= 0:
+                    
+                    fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", "<b>기대수익을 위한 포트폴리오"))
+
+
+                    fig.add_trace(go.Pie(
+                        values=list(max_shape.values[0][-3:]),
+                        labels=list(max_shape.columns[-3:]),
+                        domain=dict(x=[0, 0.5]),
+                        name="GHG Emissions"),
+                        row=1, col=1)
+
+                    fig.add_trace(go.Pie(
+                        values=list(max_shape.values[0][-3:]* (1-float(solution)))+[float(solution)] ,
+                        labels=list(max_shape.columns[-3:]) + ['채권'],
+                        domain=dict(x=[0.5, 1.0]),
+                        name="CO2 Emissions"),
+                        row=1, col=2)
+
+                    # 그래프 출력
+                    st.plotly_chart(fig)
+
+                else:
+                    fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", f"<b>투자금 비중</b><br><sup>자기자본의 {-solution*100:0.4}%만큼 차입</sup>"))
+
+
+                    fig.add_trace(go.Pie(
+                        values=list(max_shape.values[0][-3:]),
+                        labels=list(max_shape.columns[-3:]),
+                        domain=dict(x=[0, 0.5])),
+                        row=1, col=1)
+
+                    fig.add_trace(go.Pie(
+                        values=[1/(1-solution),1-(1/(1-solution))] ,
+                        labels=['자기자본','차입금'],
+                        domain=dict(x=[0.5, 1.0])),
+                        row=1, col=2)
+
+                    # 그래프 출력
+                    st.plotly_chart(fig)
+
+
+                st.write(f"채권의 비중 : {solution}")
+                st.write(f"이 경우 Risk : {(1-solution)*max_shape['Risk'].iloc[0]}")
     else:
-        fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", f"<b>투자금 비중</b><br><sup>자기자본의 {-solution*100:0.4}%만큼 차입</sup>"))
-
-
-        fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-3:]),
-            labels=list(max_shape.columns[-3:]),
-            domain=dict(x=[0, 0.5])),
-            row=1, col=1)
-
-        fig.add_trace(go.Pie(
-            values=[1/(1-solution),1-(1/(1-solution))] ,
-            labels=['자기자본','차입금'],
-            domain=dict(x=[0.5, 1.0])),
-            row=1, col=2)
-
-        # 그래프 출력
-        st.plotly_chart(fig)
-
-
+        st.write("선택된 섹터가 없습니다. 섹터를 선택해주세요.")
 
 
 elif selected_item == "중립형":
