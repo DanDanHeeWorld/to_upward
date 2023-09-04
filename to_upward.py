@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import koreanize_matplotlib
 import warnings
 warnings.filterwarnings('ignore')
+import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sympy
@@ -175,4 +176,16 @@ def monte_sim(sim_num,tmp,stocks,stock_money,day=100):
         balance_df += pd.DataFrame(np.array(X).reshape(sim_num,day))
     return balance_df.T
 
+def get_simret(balance_df,balance):
+    tmp3 = pd.DataFrame()
+    for i in [0.9,0.75,0.5,0.25,0.1]:
+        lst = []
+        idx = balance_df.T[balance_df.iloc[-1] >= balance_df.iloc[-1].quantile(i)][99].sort_values().index[0]
+        for k in range(19,100,20):
+            lst.append((balance_df.T.iloc[idx].iloc[k]-balance)/balance*100)
+        tmp3[f'{100-i*100}%'] = lst
+
+    tmp3.index=[f"{i}month" for i in range(1,6)]
+    display(tmp3)
+    display(px.line(tmp3))
 
