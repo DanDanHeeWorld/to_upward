@@ -11,7 +11,9 @@ import datetime as dt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sympy
+
 import to_upward
+from tqdm.auto import tqdm
 from streamlit_extras.switch_page_button import switch_page
 
 from pages import shape
@@ -58,7 +60,11 @@ if 'recommended_stocks' not in st.session_state:
 warnings.filterwarnings('ignore')
 
 
+data = load_csv(f"{DATA_PATH}labeled_data_final2.csv")
+
+
 try:
+
     st.markdown(
     """
     <style>
@@ -76,20 +82,25 @@ try:
         if want_to_home:
             switch_page("Home")
     page3()
-    data = load_csv(f"{DATA_PATH}labeled_data_final2.csv")
+
+
     st.write(f"type_of_user: {st.session_state.type_of_user}")
     st.write(f"선택한 섹터 : {st.session_state.selected_sectors}")
     st.write(f"추천 주식 : {st.session_state.recommended_stocks}")
 
-    selected_result = st.session_state.recommended_stocks
-    if selected_result is not None:
 
-        #if st.session_state.recommended_stocks is not None:
-        
+
+
+    st.write("이 중 기준으로 할 하나의 기업을 선택하세요.")
+
+    selected_result = st.selectbox('기준 선택', st.session_state.recommended_stocks ,help= '선택한 기업을 기준으로 상관계수가 낮은 순서대로 다른 기업들이 자동 선택됩니다.')
+    st.write('선택한 결과: ', selected_result)
+    if selected_result is not None:
+        #try:
+
             str_list = data.Code.astype(str).to_list()
             target_len = 6
             padded_str_list = to_upward.pad_str(str_list, target_len)
-
             data.Code = padded_str_list
 
 
@@ -102,51 +113,42 @@ try:
                 return t
             tmp= load_stock(start, end, data, st.session_state.recommended_stocks)
 
-            daily_ret = tmp[st.session_state.recommended_stocks].pct_change()
-            annual_ret = (1+daily_ret.mean())**tmp[st.session_state.recommended_stocks].shape[0]-1
-            daily_cov = daily_ret.cov()
-            annual_cov = daily_cov * tmp[st.session_state.recommended_stocks].shape[0]
+            selected_result_sorted=tmp.corr()[[f'{selected_result}']].sort_values(by=f'{selected_result}')
+            mask = selected_result_sorted[f'{selected_result}']<1
+            mask_sorted=tmp.corr()[[f'{selected_result}']][mask].sort_values(by=f'{selected_result}')
+            mask_sorted
 
-            tmp2 = pd.DataFrame((annual_ret-0.02)/daily_ret.std()*np.sqrt(252),columns= ['Shape']).sort_values(by='Shape',ascending=False)
-            tmp2
+            if len(mask_sorted) >=5:
+                stocks = list(mask_sorted.index)[0:4]+[f"{selected_result}"]
+            elif len(mask_sorted) <5:
+                stocks= list(mask_sorted.index)[0:]+[f"{selected_result}"]
 
-            if len(st.session_state.recommended_stocks) >=5:
-                stocks = list(tmp2.iloc[0:5].index)
-            elif len(st.session_state.recommended_stocks) <5:
-                stocks= list(tmp2.iloc[0:].index)
+
+            st.write('상관계수 상위 기업과 선택한 기준:', stocks)
+            st.divider()
 
             daily_ret = tmp[stocks].pct_change()
             annual_ret = (1+daily_ret.mean())**tmp[stocks].shape[0]-1
             daily_cov = daily_ret.cov()
             annual_cov = daily_cov * tmp[stocks].shape[0]
 
-            
-
+        
             if sum(annual_ret<0) == len(annual_ret<0):
-                st.warning(f'연평균 수익률이 모두 음수인 업체이므로, 포트폴리오를 구성하기에 바람직하지 않습니다. 새롭게 sector를 선택해주세요.')
-                #def page3():
-                    #want_to_home = st.button("메인화면")
-                    #if want_to_home:
-                        #switch_page("Home")
-
-                #page3()
-               
+                    st.warning(f'연평균 수익률이 모두 음수인 업체이므로, 포트폴리오를 구성하기에 바람직하지 않습니다. 새롭게 sector를 선택해주세요.')
+                  
+                    
 
             else:
-
-                st.write('상위 기업 자동 선택:', stocks)
-                st.divider()
-
 
                 port_ret = []
                 port_risk = []
                 port_weights = []
                 shape_ratio = []
                 rf = 0.0325
-                
                 for i in range(30000):
                     weights = np.random.random(len(stocks))
                     weights /= np.sum(weights)
+                    
                     returns = np.dot(weights, annual_ret)
                     risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
                     port_ret.append(returns)
@@ -156,22 +158,19 @@ try:
                 portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
                 for j, s in enumerate(stocks):
                     portfolio[s] = [weight[j] for weight in port_weights]
-                    
                 df = pd.DataFrame(portfolio)
                 max_shape = df.loc[df['Shape'] == df['Shape'].max()]
                 min_risk = df.loc[df['Risk'] == df['Risk'].min()]
-
-
                 tmp2 = df.groupby('Risk')[['Returns']].max().reset_index()
 
                 best_ret = tmp2.loc[0,'Returns']
                 for i in range(tmp2.shape[0]):
                     if tmp2.loc[i,'Returns']<best_ret:
                         tmp2.drop(index=i,inplace=True)
-                    elif tmp2.loc[i, 'Returns'] >= best_ret :
+                    elif tmp2.loc[i, 'Returns'] >= best_ret:
                         best_ret = tmp2.loc[i,'Returns']
-
                 import plotly.graph_objects as go
+
                 def show_CAPM(df, tmp2, max_shape, min_risk, rf=0.035):
                     df.plot.scatter(x='Risk', y='Returns', c='Shape', cmap='viridis', edgecolors='k', figsize=(10,8), grid=True)
                     plt.plot(tmp2['Risk'], tmp2['Returns'], label='Efficient Frontier', linewidth=5,color='red')
@@ -183,14 +182,12 @@ try:
                     plt.title('Efficient Frontier Graph')
                     plt.legend()
                     st.pyplot(plt)
-                show_CAPM(df, tmp2, max_shape, min_risk, rf=0.035)
+
+                show_CAPM(df,tmp2,max_shape,min_risk,rf=0.035)
                 st.write('max_shape')
                 st.dataframe(max_shape)
                 st.write('min_risk')
                 st.dataframe(min_risk)
-
-
-
                 rf=0.0325
                 min_value= (f"{100*rf:.2f}")
                 min_value= float(min_value)
@@ -198,19 +195,18 @@ try:
                 max_value= float(max_value)
                 max_return= (f"{100*max_shape['Returns'].iloc[0]:.2f}")
                 max_return = float(max_return)
-                
-                st.session_state.exp_ret = st.slider("기대수익을 선택해주세요.", min_value, max_value, step=0.1, key="shape_1") /100
+                st.session_state.exp_ret = st.slider("기대수익을 선택해주세요.", min_value, max_value, step=0.1, key="corr_1") /100
                 st.text(f"위험기피: 기대수익 {min_value}% 이상 {max_return}% 미만입니다.\n중립: 기대수익 {max_return}% 입니다.\n위험선호: 기대수익 {max_return}% 초과 {max_value}% 이하입니다.")
-                if st.session_state.exp_ret >= min_value and st.session_state.exp_ret < max_return:
+                if float(st.session_state.exp_ret) >= min_value and float(st.session_state.exp_ret) < max_return:
                     st.write('당신은 안정형(위험기피) 유형입니다.')
-                if st.session_state.exp_ret == max_return:
+                elif float(st.session_state.exp_ret) == max_return:
                     st.write('당신은 안정형(중립) 유형입니다.')
-                if st.session_state.exp_ret > max_return and st.session_state.exp_ret <= max_value:
-                    st.write('당신은 안정형(위험선호) 유형입니다.')
+                elif float(st.session_state.exp_ret) > max_return and float(st.session_state.exp_ret) <= max_value:
+                    st.write('당신은 안정형(위험선호) 유형입니다. 수익형 포트폴리오를 선택하시는 것을 권장합니다.')
 
                 st.divider()
+
                 if st.session_state.exp_ret is not None:
-                # if st.session_state.exp_ret > 100*rf:
 
                     w = sympy.Symbol('w')
 
@@ -285,17 +281,13 @@ try:
                         tmp3.index=[f"{i}month" for i in range(1,6)]
                         st.write(tmp3)
                         st.write(px.line(tmp3))
-                        #def page3():
-                            #want_to_home = st.button("메인화면")
-                            #if want_to_home:
-                                #switch_page("Home")
-
-                        #page3()
                         st.success("메인 화면으로 돌아가려면 상단의 메인화면 버튼을 눌러주세요.")
 
-        
+                else:
+                    st.warning('기대 수익을 선택해주세요.')
 
-            
 
+           
 except Exception as e:
     pass
+    
