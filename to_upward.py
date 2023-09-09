@@ -176,7 +176,7 @@ def monte_sim(sim_num,tmp,stocks,stock_money,day=100):
         balance_df += pd.DataFrame(np.array(X).reshape(sim_num,day))
     return balance_df.T
 
-def get_simret(balance_df,balance):
+def get_simret(balance_df,balance,now_data=None,kospi200=None):
     tmp3 = pd.DataFrame()
     for i in [0.9,0.75,0.5,0.25,0.1]:
         lst = []
@@ -186,6 +186,17 @@ def get_simret(balance_df,balance):
         tmp3[f'{100-i*100}%'] = lst
 
     tmp3.index=[f"{i}month" for i in range(1,6)]
-    display(tmp3)
-    display(px.line(tmp3))
+    tmp3.columns =['호황','상승','평년','하락','불황']
+    if now_data is not None:
+        future_data = now_data[(now_data.index >before_data.index.max())&(now_data.index < dt.datetime(2023,8,2))]
+        future_data = future_data[stocks].groupby(future_data.index.to_period('M')).first()
+        future_data = (future_data/future_data.iloc[0]-1).drop(index=future_data.index[0])
+        tmp3['real'] = ((future_data*port_weigth).sum(axis=1)*100).to_list()
+    
+    if kospi200 is not None:
+        f_kospi =kospi200[(kospi200.index >before_data.index.max())&(kospi200.index < dt.datetime(2023,8,2))]
+        f_kospi = f_kospi.groupby(f_kospi.index.to_period('M')).first()
+        f_kospi = (f_kospi/f_kospi.iloc[0]-1).drop(index=f_kospi.index[0])
+        tmp3['KOSPI'] = (f_kospi*100).to_list()
 
+    return tmp3
