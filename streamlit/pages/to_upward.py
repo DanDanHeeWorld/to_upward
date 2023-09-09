@@ -121,15 +121,15 @@ def show_portfolio(max_shape,exp_ret):
 
 
         fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-5:]),
-            labels=list(max_shape.columns[-5:]),
+            values=list(max_shape.values[0][3:]),
+            labels=list(max_shape.columns[3:]),
             domain=dict(x=[0, 0.5]),
             name="기존 포트폴리오"),
             row=1, col=1)
 
         fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-5:]* (1-float(solution)))+[float(solution)] ,
-            labels=list(max_shape.columns[-5:]) + ['채권'],
+            values=list(max_shape.values[0][3:]* (1-float(solution)))+[float(solution)] ,
+            labels=list(max_shape.columns[3:]) + ['채권'],
             domain=dict(x=[0.5, 1.0]),
             name="기대수익 포트폴리오"),
             row=1, col=2)
@@ -142,8 +142,8 @@ def show_portfolio(max_shape,exp_ret):
 
 
         fig.add_trace(go.Pie(
-            values=list(max_shape.values[0][-5:]),
-            labels=list(max_shape.columns[-5:]),
+            values=list(max_shape.values[0][3:]),
+            labels=list(max_shape.columns[3:]),
             domain=dict(x=[0, 0.5])),
             row=1, col=1)
 
