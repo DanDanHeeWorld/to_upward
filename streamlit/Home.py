@@ -15,7 +15,7 @@ import to_upward
 from streamlit_extras.switch_page_button import switch_page
 from streamlit_extras.colored_header import colored_header
 
-from pages import Shape
+from pages import Sharpe
 from pages import Correlation
 from pages import Stock_Chatbot
 

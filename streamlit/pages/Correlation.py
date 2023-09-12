@@ -11,9 +11,9 @@ import datetime as dt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sympy
-from pages import correlation
-from pages import shape
-from pages import chatbot2
+from pages import Sharpe
+from pages import Correlation
+from pages import Stock_Chatbot
 import to_upward
 from tqdm.auto import tqdm
 from streamlit_extras.switch_page_button import switch_page

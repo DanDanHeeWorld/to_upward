@@ -38,46 +38,70 @@ def get_close(data,stocks,start,end):
     return tmp
 
 
+import scipy.optimize as sco
+def stat(weights,annual_cov,annual_ret):
+    returns = np.dot(weights, annual_ret)
+    risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
+    return [risk,returns]
+
+class Effective_frontier:
+    def __init__(self,annual_cov,annual_ret):
+        self.annual_cov = annual_cov
+        self.annual_ret = annual_ret
+
+    def ef(self,weight):
+        return stat(weight,self.annual_cov,self.annual_ret)[0]**2
+    
+# def effective_frontier(weight):
+#     return stat(weight,annual_cov,annual_ret)[0]**2
+
 def get_portfolio(stocks,annual_ret,annual_cov):
-  port_ret = []
-  port_risk = []
-  port_weights = []
-  shape_ratio = []
-  rf= 0.0325
+    port_ret = []
+    port_risk = []
+    port_weights = []
+    shape_ratio = []
 
-  for i in range(30000):
+    for i in range(5000):
 
-      weights = np.random.random(len(stocks))
-      weights /= np.sum(weights)
-
-
-      returns = np.dot(weights, annual_ret)
+        weights = np.random.random(len(stocks))
+        weights /= np.sum(weights)
 
 
-      risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
+        returns = np.dot(weights, annual_ret)
 
-      port_ret.append(returns)
-      port_risk.append(risk)
-      port_weights.append(weights)
-      shape_ratio.append(returns/risk)
+        risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
 
-  portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
-  for j, s in enumerate(stocks):
-      portfolio[s] = [weight[j] for weight in port_weights]
+        port_ret.append(returns)
+        port_risk.append(risk)
+        port_weights.append(weights)
+        shape_ratio.append(returns/risk)
 
-  df = pd.DataFrame(portfolio)
+    portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
+    for j, s in enumerate(stocks):
+        portfolio[s] = [weight[j] for weight in port_weights]
 
-  max_shape = df.loc[df['Shape'] == df['Shape'].max()]
-  min_risk = df.loc[df['Risk'] == df['Risk'].min()]
-  tmp2 = df.groupby('Risk')[['Returns']].max().reset_index()
+    df = pd.DataFrame(portfolio)
 
-  best_ret = tmp2.loc[0,'Returns']
-  for i in range(tmp2.shape[0]):
-    if tmp2.loc[i,'Returns']<best_ret:
-      tmp2.drop(index=i,inplace=True)
-    elif tmp2.loc[i, 'Returns'] >= best_ret:
-        best_ret = tmp2.loc[i,'Returns']
-  return max_shape,min_risk,tmp2,df
+    max_shape = df.loc[df['Shape'] == df['Shape'].max()]
+    min_risk = df.loc[df['Risk'] == df['Risk'].min()]
+
+    weight = np.random.random(len(stocks))
+    weight = weight/np.sum(weight)
+    #최적화 
+    bnds = tuple((0,1) for x in range(len(stocks)))
+    T_return = np.linspace(df['Returns'].min(),df['Returns'].max(),50) #수익률 구간 0~20%  
+    T_vol = []           #목표 수익률별 최저분산 포트폴리오의 표준편차가 들어갈 벡터
+
+    ef = Effective_frontier(annual_cov,annual_ret)
+    for r in T_return :
+        cons = ({'type' : 'eq', 'fun' : lambda x : np.sum(x) - 1},   #np.sum(x) = 비중의 총합   
+                    {'type' : 'eq', 'fun' : lambda x : stat(x,annual_cov,annual_ret)[1] - r }) #Tr = 목표 수익률 
+        opts = sco.minimize(ef.ef, weight, method = 'SLSQP', bounds = bnds, constraints = cons) #제한 수익률에서 분산 minimize
+        T_vol.append(np.sqrt(opts['fun']))
+        
+    tmp2 = pd.DataFrame({'Returns': T_return, 'Risk':T_vol})
+
+    return max_shape,min_risk,tmp2,df
 
 def show_CAPM(df, tmp2, max_shape, min_risk, rf=0.035):
     df.plot.scatter(x='Risk', y='Returns', c='Shape', cmap='viridis', edgecolors='k', figsize=(10,8), grid=True)
@@ -153,8 +177,10 @@ def show_portfolio(max_shape,exp_ret):
             domain=dict(x=[0.5, 1.0])),
             row=1, col=2)
 
-        st.plotly_chart(fig)
+        # st.plotly_chart(fig)
         st.write('위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.')
+        return fig, solution # fig,solution 반환 > fig,solution 그대로 받아주기.
+        
 
 def geometric_brownian_motion(tmp,S0, T=100, dt=1/100):
     """
@@ -195,7 +221,8 @@ def monte_sim(sim_num,tmp,stocks,stock_money,day=100):
         balance_df += pd.DataFrame(np.array(X).reshape(sim_num,day))
     return balance_df.T
 
-def get_simret(balance_df,balance):
+def get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data=None,kospi200=None,rf=0.0325):
+    port_weigth = max_shape[max_shape.columns[3:]].values
     tmp3 = pd.DataFrame()
     for i in [0.9,0.75,0.5,0.25,0.1]:
         lst = []
@@ -205,6 +232,18 @@ def get_simret(balance_df,balance):
         tmp3[f'{100-i*100}%'] = lst
 
     tmp3.index=[f"{i}month" for i in range(1,6)]
-    st.write(tmp3)
-    st.write(px.line(tmp3))
+    tmp3.columns =['호황','상승','평년','하락','불황']
+    if now_data is not None:
+        future_data = now_data[(now_data.index >before_data.index.max())&(now_data.index < dt.datetime(2023,8,2))]
+        future_data = future_data[stocks].groupby(future_data.index.to_period('M')).first()
+        future_data = (future_data/future_data.iloc[0]-1).drop(index=future_data.index[0])
+        tmp3['real'] = ((future_data*port_weigth).sum(axis=1)*100).to_list()
+    tmp3 = tmp3*(1-solution) + rf * solution*100
+    if kospi200 is not None:
+        f_kospi =kospi200[(kospi200.index >before_data.index.max())&(kospi200.index < dt.datetime(2023,8,2))]
+        f_kospi = f_kospi.groupby(f_kospi.index.to_period('M')).first()
+        f_kospi = (f_kospi/f_kospi.iloc[0]-1).drop(index=f_kospi.index[0])
+        tmp3['KOSPI'] = (f_kospi*100).to_list()
+    # 받아주는 인수가 많아짐. 
+    return tmp3
 
