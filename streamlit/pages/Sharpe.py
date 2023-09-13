@@ -18,12 +18,13 @@ import to_upward
 from streamlit_extras.switch_page_button import switch_page
 import io
 import base64
+import scipy.optimize as sco
 
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
 
-DATA_PATH = "./"
+DATA_PATH = "/"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -140,7 +141,7 @@ try:
                 max_return= (f"{100*max_shape['Returns'].iloc[0]:.2f}")
                 max_return = float(max_return)
                 
-                exp_ret = st.slider("기대수익을 선택해주세요.", min_value, max_value, step=0.1) /100
+                exp_ret = st.slider("기대수익을 선택해주세요.", min_value, max_value, step=0.1,key="slider_sharpe") /100
                 col5, col6= st.columns(2)
                 with col5:
                     st.markdown(f'''위험 기피: :green[**기대수익 {min_value}% 이상 {max_return}% 미만입니다.**]''')
@@ -148,15 +149,16 @@ try:
                     st.markdown(f'''위험 선호: :red[**기대수익 {max_return}% 초과 {max_value}% 이하입니다.**]''')
                 with col6:
                     if exp_ret*100 >= min_value and exp_ret*100 < max_return:
-                        st.image('위험기피.png', caption='당신은 안정형(위험기피형)입니다.', use_column_width=True)
+                        st.image('위험기피.png', caption='당신은 수익형(위험기피형)입니다.', use_column_width=True)
                     elif exp_ret*100 == max_return:
-                        st.image('중립.png', caption='당신은 안정형(중립형)입니다.', use_column_width=True)
+                        st.image('중립.png', caption='당신은 수익형(중립형)입니다.', use_column_width=True)
                     elif exp_ret*100 > max_return and exp_ret*100 <= max_value:
-                        st.image('위험선호.png', caption='당신은 안정형(위험선호형)입니다', use_column_width=True)
+                        st.image('위험선호.png', caption='당신은 수익형(위험선호형)입니다', use_column_width=True)
 
                 st.divider()
-                to_upward.show_portfolio(max_shape,exp_ret)
 
+                fig, solution=to_upward.show_portfolio(max_shape,exp_ret)
+                to_upward.show_portfolio2(fig, solution,max_shape)
                 st.divider()
                 if exp_ret is not None:
                     tab1, tab2= st.tabs(['미래','과거'])
@@ -167,7 +169,7 @@ try:
                         balance = 1000000
                         stock_money= max_shape[max_shape.columns[3:]]*balance
                         balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                        tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,None,None)
+                        tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,None,None,rf=0.0325)
                         col7, col8= st.columns(2)
                         with col7:
                             st.write(tmp3)
@@ -187,6 +189,11 @@ try:
                     
                     with tab2:
                         st.text(f'몬테카를로 시뮬레이션은 불확실한 상황에서 수치적 예측을 수행하는 데 사용되는 통계적 방법입니다.\n이를 활용해 올해 3월로 돌아가 위의 포트폴리오로 투자했을 때 얼마의 수익을 얻었다고 할 수 있는지\n1000번의 시뮬레이션을 돌려 8월까지의 예측값을 상위 10%, 25%, 50%, 75%, 90%로 제시해 실제 값과 비교하여 제시합니다.')
+                        daily_ret = before_data[st.session_state.recommended_stocks].pct_change()
+                        annual_ret = (1+daily_ret.mean())**before_data[st.session_state.recommended_stocks].shape[0]-1
+                        daily_cov = daily_ret.cov()
+                        annual_cov = daily_cov * before_data[st.session_state.recommended_stocks].shape[0]
+                        tmp2 = pd.DataFrame((annual_ret-0.02)/daily_ret.std()*np.sqrt(252),columns= ['Shape']).sort_values(by='Shape',ascending=False)
                         if len(st.session_state.recommended_stocks) >=5:
                             stocks = list(tmp2.iloc[0:5].index)
                         elif len(st.session_state.recommended_stocks) <5:
@@ -201,7 +208,7 @@ try:
                         balance = 1000000
                         stock_money= max_shape[max_shape.columns[3:]]*balance
                         balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                        tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,now_data,kospi200)
+                        tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data,kospi200,rf=0.0325)
                         col9, col10= st.columns(2)
                         with col9:
                             st.write(tmp3)

@@ -20,12 +20,13 @@ from streamlit_extras.switch_page_button import switch_page
 import io
 import base64
 from PIL import Image
+import scipy.optimize as sco
 
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
 
-DATA_PATH = "./"
+DATA_PATH = "/"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -169,7 +170,9 @@ try:
                             st.image('위험선호.png', caption='당신은 안정형(위험선호형)입니다', use_column_width=True)
 
                     st.divider()
-                    to_upward.show_portfolio(max_shape,exp_ret)
+                    fig, solution=to_upward.show_portfolio(max_shape,exp_ret)
+                    to_upward.show_portfolio2(fig, solution,max_shape)
+
 
                     st.divider()
 
@@ -183,7 +186,7 @@ try:
                             balance = 1000000
                             stock_money= max_shape[max_shape.columns[3:]]*balance
                             balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,None,None)
+                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,None,None,rf=0.0325)
                             col7, col8= st.columns(2)
                             with col7:
                                 st.write(tmp3)
@@ -217,7 +220,7 @@ try:
                             balance = 1000000
                             stock_money= max_shape[max_shape.columns[3:]]*balance
                             balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,now_data,kospi200)
+                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data,kospi200,rf=0.0325)
                             col9, col10= st.columns(2)
                             with col9:
                                 st.write(tmp3)

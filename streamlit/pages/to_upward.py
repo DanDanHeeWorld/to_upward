@@ -18,9 +18,11 @@ from tqdm.auto import tqdm
 from streamlit_extras.switch_page_button import switch_page
 import io
 import base64
+import scipy.optimize as sco
 
 
 def pad_str(str_list, target_len):
+
   padded_str_list = []
   for str in str_list:
     if len(str) < target_len:
@@ -38,7 +40,7 @@ def get_close(data,stocks,start,end):
     return tmp
 
 
-import scipy.optimize as sco
+
 def stat(weights,annual_cov,annual_ret):
     returns = np.dot(weights, annual_ret)
     risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
@@ -132,18 +134,20 @@ def show_portfolio(max_shape,exp_ret):
 
     solution = sympy.solve(equation, w)
     solution = float(solution[0])
-    if solution < 0 :
-        print(f"차입 비중 : {-solution}")
-        print(f"이 경우 Risk : {(1-solution)*max_shape['Risk'].iloc[0]}")
-    else : 
-        print(f"채권의 비중 : {solution}")
-        print(f"이 경우 Risk : {(1-solution)*max_shape['Risk'].iloc[0]}")
+
         
     if solution >= 0:
 
         fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", f"<b>기대수익을 위한 포트폴리오<br><sup>자기자본의 {solution*100:0.4}%만큼 채권투자</sup>"))
 
+    else:
+        fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", f"<b>투자금 비중</b><br><sup>자기자본의 {-solution*100:0.4}%만큼 차입</sup>"))
 
+    return fig, solution
+
+
+def show_portfolio2(fig, solution,max_shape):
+    if solution >= 0:
         fig.add_trace(go.Pie(
             values=list(max_shape.values[0][3:]),
             labels=list(max_shape.columns[3:]),
@@ -157,14 +161,11 @@ def show_portfolio(max_shape,exp_ret):
             domain=dict(x=[0.5, 1.0]),
             name="기대수익 포트폴리오"),
             row=1, col=2)
-
+        
         st.plotly_chart(fig)
         st.write('위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.')
 
     else:
-        fig = make_subplots(rows=1, cols=2, specs=[[{"type": "pie"}, {"type": "pie"}]],subplot_titles=("<b>포트폴리오", f"<b>투자금 비중</b><br><sup>자기자본의 {-solution*100:0.4}%만큼 차입</sup>"))
-
-
         fig.add_trace(go.Pie(
             values=list(max_shape.values[0][3:]),
             labels=list(max_shape.columns[3:]),
@@ -176,11 +177,10 @@ def show_portfolio(max_shape,exp_ret):
             labels=['자기자본','차입금'],
             domain=dict(x=[0.5, 1.0])),
             row=1, col=2)
-
-        # st.plotly_chart(fig)
+        st.plotly_chart(fig)
         st.write('위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.')
-        return fig, solution # fig,solution 반환 > fig,solution 그대로 받아주기.
-        
+
+
 
 def geometric_brownian_motion(tmp,S0, T=100, dt=1/100):
     """
