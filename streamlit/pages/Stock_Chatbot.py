@@ -8,7 +8,7 @@ from streamlit_extras.colored_header import colored_header
 import pandas as pd
 import to_upward
 
-from pages import Shape
+from pages import Sharpe
 from pages import Correlation
 from pages import Stock_Chatbot
 
