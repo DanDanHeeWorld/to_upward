@@ -158,7 +158,6 @@ def show_portfolio(max_shape,exp_ret):
             name="기대수익 포트폴리오"),
             row=1, col=2)
 
-        st.plotly_chart(fig)
         st.write('위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.')
 
     else:
