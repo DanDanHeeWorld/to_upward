@@ -59,12 +59,28 @@ class Effective_frontier:
 #     return stat(weight,annual_cov,annual_ret)[0]**2
 
 @st.cache_data(ttl=900)
+def stat(weights,annual_cov,annual_ret):
+    returns = np.dot(weights, annual_ret)
+    risk = np.sqrt(np.dot(weights.T, np.dot(annual_cov, weights)))
+    return [risk,returns]
+
+class Effective_frontier:
+    def __init__(self,annual_cov,annual_ret):
+        self.annual_cov = annual_cov
+        self.annual_ret = annual_ret
+
+    def ef(self,weight):
+        return stat(weight,self.annual_cov,self.annual_ret)[0]**2
+    
+# def effective_frontier(weight):
+#     return stat(weight,annual_cov,annual_ret)[0]**2
+
 def get_portfolio(stocks,annual_ret,annual_cov):
     port_ret = []
     port_risk = []
     port_weights = []
-    sharpe_ratio = []
-
+    shape_ratio = []
+    np.random.seed(42)
     for i in range(5000):
 
         weights = np.random.random(len(stocks))
@@ -78,15 +94,15 @@ def get_portfolio(stocks,annual_ret,annual_cov):
         port_ret.append(returns)
         port_risk.append(risk)
         port_weights.append(weights)
-        sharpe_ratio.append(returns/risk)
+        shape_ratio.append(returns/risk)
 
-    portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'sharpe' : sharpe_ratio}
+    portfolio = {'Returns' : port_ret, 'Risk' : port_risk, 'Shape' : shape_ratio}
     for j, s in enumerate(stocks):
         portfolio[s] = [weight[j] for weight in port_weights]
 
     df = pd.DataFrame(portfolio)
 
-    max_sharpe = df.loc[df['sharpe'] == df['sharpe'].max()]
+    max_shape = df.loc[df['Shape'] == df['Shape'].max()]
     min_risk = df.loc[df['Risk'] == df['Risk'].min()]
 
     weight = np.random.random(len(stocks))
@@ -95,17 +111,21 @@ def get_portfolio(stocks,annual_ret,annual_cov):
     bnds = tuple((0,1) for x in range(len(stocks)))
     T_return = np.linspace(df['Returns'].min(),df['Returns'].max(),50) #수익률 구간 0~20%  
     T_vol = []           #목표 수익률별 최저분산 포트폴리오의 표준편차가 들어갈 벡터
-
+    tmp_weights = []
     ef = Effective_frontier(annual_cov,annual_ret)
     for r in T_return :
         cons = ({'type' : 'eq', 'fun' : lambda x : np.sum(x) - 1},   #np.sum(x) = 비중의 총합   
                     {'type' : 'eq', 'fun' : lambda x : stat(x,annual_cov,annual_ret)[1] - r }) #Tr = 목표 수익률 
         opts = sco.minimize(ef.ef, weight, method = 'SLSQP', bounds = bnds, constraints = cons) #제한 수익률에서 분산 minimize
         T_vol.append(np.sqrt(opts['fun']))
+        tmp_weights.append(opts['x'])
         
     tmp2 = pd.DataFrame({'Returns': T_return, 'Risk':T_vol})
+    tmp2[stocks]=tmp_weights
+    max_shape = tmp2.iloc[[-1]]
+    max_shape['Sharpe'] = max_shape['Returns']/max_shape['Risk']
 
-    return max_sharpe,min_risk,tmp2,df
+    return max_shape,min_risk,tmp2,df
 
 
 def show_CAPM(df, tmp2, max_sharpe, min_risk, rf=0.0325):
