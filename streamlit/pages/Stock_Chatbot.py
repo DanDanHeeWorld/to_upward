@@ -1,6 +1,5 @@
 import streamlit as st
 from streamlit_chat import message
-# from streamlit.components.v1 import html
 from bardapi import Bard
 import os
 import requests
@@ -18,7 +17,7 @@ if "page" not in st.session_state:
 
 
 
-DATA_PATH = "C:/Users/Jonghyeon/Desktop/파이널프로젝트/data/"
+DATA_PATH = "/"
 
 # 데이터 불러오는 함수(캐싱)
 @st.cache_data(ttl=900)  # 캐싱 데코레이터
@@ -492,7 +491,6 @@ contents:[
 
 
 
-
 str_dict = {'value':[value,value_str],
             'volitality':[volitality,volitality_str],
             'performance':[performance,performance_str],
@@ -546,9 +544,14 @@ def on_btn_click():
     st.session_state['generated'] = [{'type': 'normal', 'data': "어떤 주식에 투자하려고 하시나요?"}]
     st.session_state['chat_stage'] = 1
 
+if 'user_input' not in st.session_state: # user_input 키 초기화
+    st.session_state['user_input'] = ""
+
 def on_input_change():
     user_input = st.session_state.user_input
     st.session_state.past.append(user_input)
+    # 사용자 입력 후, 입력 필드 초기화
+    st.session_state['user_input'] = ""
 
     # sector_interest 키 초기화
     st.session_state.setdefault('sector_interest', '')   
@@ -639,40 +642,8 @@ with chat_placeholder.container():
     
     st.button("대화 초기화", on_click=on_btn_click, key="clear_key")
 
+
 with st.container():
-    st.text_input("챗봇과 대화하기:", on_change=on_input_change, key="user_input", help="대화 초기화 버튼을 누르면 초기화면으로 돌아옵니다.")
+    st.text_input("챗봇과 대화하기:", value=st.session_state['user_input'], on_change=on_input_change, key="user_input", help="대화 초기화 버튼을 누르면 초기화면으로 돌아옵니다.")
 
-
-
-# 엔터키를 누르면 입력한 내용이 삭제되도록 설정
-# if 'user_input' not in st.session_state:
-#     st.session_state['user_input'] = ""
-
-# user_input = st.text_input("챗봇과 대화하기:", value=st.session_state['user_input'])
-
-# if user_input:
-#     st.session_state['user_input'] = ""
-
-
-
-
-
-
-# message 함수 설명
-# message (str) 
-# 설명: 채팅 컴포넌트에 표시될 메시지 내용입니다.
-# is_user (bool, 기본값: False)  
-# 설명: 메시지의 발신자가 사용자인지 여부를 지정합니다. True로 설정하면 메시지가 오른쪽에 정렬됩니다.
-# avatar_style (AvatarStyle 또는 None, 기본값: None) 
-# 설명: 메시지 발신자의 아바타 스타일을 지정합니다. 기본값은 bottts (for non-user)과 pixel-art-neutral (for user)입니다. 아바타 스타일은 dicebear에서 선택할 수 있습니다.
-# logo (str 또는 None, 기본값: None)
-# 설명: 아바타 대신 사용할 로고를 지정합니다. 이는 챗봇에 브랜드를 부여하려는 경우 유용합니다.
-# seed (int 또는 str, 기본값: 88)
-# 설명: 사용할 아바타를 선택하는 데 사용되는 시드입니다.
-# allow_html (bool, 기본값: False)
-# 설명: 메시지에 HTML을 사용할 수 있는지 여부를 지정합니다. True로 설정하면 HTML 사용이 가능해집니다.
-# is_table (bool, 기본값: False)
-# 설명: 테이블에 특정 스타일을 적용할지 여부를 지정합니다.
-# key (str 또는 None, 기본값: None)
-# 설명: 이 컴포넌트를 고유하게 식별하는 선택적 키입니다. 이 값이 None이고 컴포넌트의 인수가 변경되면, 컴포넌트는 Streamlit 프론트엔드에서 다시 마운트되고 현재 상태를 잃게 됩니다.
 
