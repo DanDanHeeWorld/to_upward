@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
@@ -247,7 +246,7 @@ def get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data
     # 받아주는 인수가 많아짐. 
     return tmp3
 
-=======
+
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
@@ -496,5 +495,3 @@ def get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data
         tmp3['KOSPI'] = (f_kospi*100).to_list()
     # 받아주는 인수가 많아짐. 
     return tmp3
-
->>>>>>> 488d0d3504c9cd553e90f0d4a897decfaa64f22f
