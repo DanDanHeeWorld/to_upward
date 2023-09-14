@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import warnings
 import datetime as dt
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import sympy
 from pages import Sharpe
 from pages import Correlation
 from pages import Stock_Chatbot
@@ -18,6 +16,8 @@ import to_upward
 from streamlit_extras.switch_page_button import switch_page
 import scipy.optimize as sco
 import plotly.subplots as sp
+from streamlit_extras.colored_header import colored_header
+
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
@@ -25,7 +25,7 @@ if "page" not in st.session_state:
 
 
 
-DATA_PATH = "/"
+DATA_PATH = "./"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -37,41 +37,14 @@ def load_csv(path):
 data = load_csv(f"{DATA_PATH}labeled_data_final2.csv")
 
 # 오류 방지를 위한 패딩 함수
-def pad_str(str_list, target_len):
-
-  padded_str_list = []
-  for str in str_list:
-    if len(str) < target_len:
-      padded_str = "0" * (target_len - len(str)) + str
-    else:
-      padded_str = str
-    padded_str_list.append(padded_str)
-  return padded_str_list
 str_list = data.Code.astype(str).to_list()
 target_len = 6
-padded_str_list = pad_str(str_list, target_len)
-
+padded_str_list = to_upward.pad_str(str_list, target_len)
 data.Code = padded_str_list
 
 # 마감일 및 시작일
 end = dt.datetime.today().date().strftime("%Y%m%d")
 start = (dt.datetime.today().date() - dt.timedelta(365)).strftime("%Y%m%d")
-
-# 종가를 가져올 주식 목록
-all_stocks = data['Name'] # 전체 선택
-
-# pykrx에서 종가 데이터를 가져오는 함수
-@st.cache_data(ttl=900)  # 캐싱 데코레이터
-def load_stock(start, end, data, all_stocks):
-    t = pd.DataFrame()
-    for n in all_stocks:
-        t[n] = stock.get_market_ohlcv(start, end, data[data['Name'] == n]['Code'])['종가']
-    return t
-
-tmp = load_stock(start, end, data, all_stocks)
-
-
-
 
 
 def reset_seeds(seed):
@@ -80,25 +53,11 @@ def reset_seeds(seed):
     np.random.seed(seed)
 
 
-
-
-PAGES = {
-
-    "Shape Portfolio": Sharpe,
-    "Correlation" : Correlation,
-    "chatbot" : Stock_Chatbot
-
-}
-
-
 if 'type_of_user' not in st.session_state:
     st.session_state.type_of_user = None
 
 if 'selected_sectors' not in st.session_state:
     st.session_state.selected_sectors = []
-
-if 'exp_ret' not in st.session_state:
-    st.session_state.exp_ret = 5.0
 
 if 'recommended_stocks' not in st.session_state:
     st.session_state.recommended_stocks = []
@@ -107,10 +66,12 @@ if 'recommended_stocks' not in st.session_state:
 warnings.filterwarnings('ignore')
 
 
-
 # Survey Part
-st.title("우상향, 나의 투자 포트폴리오")
-st.title("설문조사")
+colored_header(
+    label='투자성향에 맞는 포트폴리오 추천',
+    description="고객님의 투자 성향에 맞는 포트폴리오를 간편하게 추천해드립니다.",
+    color_name="blue-70",
+)
 
 
 st.markdown(
@@ -220,11 +181,16 @@ if len(st.session_state.selected_sectors) ==2:
         conditions = [filter_by_grade(data, sector) for sector in st.session_state.selected_sectors]
         final_condition = np.logical_and.reduce(conditions)
         stocks = data[final_condition]["Name"].to_list()
-        st.write('추천 종목:', stocks)
+        st.markdown(f""":blue[**추천 종목**]:chart_with_upwards_trend: *{stocks}*""")
         # 추천 종목을 표시
         # 추천 종목 계산 후
         st.session_state.recommended_stocks = stocks
-        st.write('당신의 투자 성향을 선택해주세요.')
+        st.markdown(f"""
+            <span style='font-size: 20px;'>
+            <div style="text-align: center; color: #4655f2;">
+                <strong>당신의 투자 성향을 선택해주세요.</strong>
+            </div>
+            """, unsafe_allow_html=True)
         st.markdown(
             """
             <style>
@@ -248,8 +214,8 @@ if len(st.session_state.selected_sectors) ==2:
 
         def page2():
 
-            want_to_shape = st.button("수익형")
-            if want_to_shape:
+            want_to_sharpe = st.button("수익형")
+            if want_to_sharpe:
                 st.session_state.type_of_user = "수익형"
                 switch_page("Sharpe")
 
@@ -271,13 +237,18 @@ elif len(st.session_state.selected_sectors) == 3:
         conditions = [filter_by_grade(data, sector) for sector in st.session_state.selected_sectors]
         final_condition = np.logical_and.reduce(conditions)
         stocks = data[final_condition]["Name"].to_list()
-        st.write('추천 종목:', stocks)
+        st.markdown(f""":blue[**추천 종목**]:chart_with_upwards_trend: *{stocks}*""")
         # 추천 종목을 표시
         # 추천 종목 계산 후
         st.session_state.recommended_stocks = stocks
 
 
-        st.write('당신의 투자 성향을 선택해주세요.')
+        st.markdown(f"""
+            <span style='font-size: 20px;'>
+            <div style="text-align: center; color: #4655f2;">
+                <strong>당신의 투자 성향을 선택해주세요.</strong>
+            </div>
+            """, unsafe_allow_html=True)
 
 
         st.markdown(
@@ -303,8 +274,8 @@ elif len(st.session_state.selected_sectors) == 3:
 
         def page2():
 
-            want_to_shape = st.button("수익형")
-            if want_to_shape:
+            want_to_sharpe = st.button("수익형")
+            if want_to_sharpe:
                 st.session_state.type_of_user = "수익형"
                 switch_page("Sharpe")
 
@@ -319,7 +290,7 @@ elif len(st.session_state.selected_sectors) == 3:
 
         
 else:
-    st.write('섹터를 2개 이상 선택해주세요.')
+    st.warning('섹터를 2개 이상 선택해주세요.')
 
 
 
@@ -355,7 +326,7 @@ if st.session_state.show_description:
     A+ (최상위 가치): 이 등급은 시장에서 상위 99% 이상의 가치를 가진 주식을 나타냅니다. 이러한 주식은 현재 시장 가치보다 높은 가치를 가지며, 투자자들에게 매우 높은 가치 투자 기회를 제공합니다. \n
     A (상위 가치): 이 등급은 현재 시장 가치보다 높은 가치를 가진 주식을 나타냅니다. 투자자들에게 높은 가치 투자 기회를 제공하며, 안정적인 수익률을 기대할 수 있습니다. \n
     B (중위 가치): 이 등급은 시장 평균 가치보다 약간 높은 가치를 가진 주식을 표시합니다. 이러한 주식은 안정적인 투자 기회와 더불어 잠재적인 성장 가능성을 제공합니다. \n
-    C (중하위 가치): 이 등급은 시장 평균 가치에 근접한 주식을 나타냅니다. 안정적인 투자 기회를 제공하면서도 일정한 성장 가능성이 있는 주식입니다. \n
+    C (평균 가치): 이 등급은 시장 평균 가치에 근접한 주식을 나타냅니다. 안정적인 투자 기회를 제공하면서도 일정한 성장 가능성이 있는 주식입니다. \n
     """)    
 
     st.write("#### 경영 (Business): [A,B,C,D 中]")
@@ -371,7 +342,7 @@ if st.session_state.show_description:
     B (양호 등급): 이 등급의 기업들은 상위 11% 이상의 당좌비율과 유동비율을 보유하고 있으며, 현금 흐름도 평균 이상입니다. 재무 안정성이 높은 편입니다. \n
     C (보통 등급): 이 등급의 기업들은 B 등급과 유사한 당좌비율과 유동비율을 보유하고 있지만, 현금 흐름이 평균 이하입니다. 그러나 안정적인 재무 구조를 유지하고 있습니다. \n
     D (중하 등급): 이 등급의 기업들은 유동비율과 당좌비율이 낮은 편이며, 현금 흐름이 하위권에 속합니다. 그러나 부채 상환 여력은 아직 충분합니다. \n
-    E (하위 등급): 이 등급의 기업들은 점차 부채 상환 능력이 낮아지고 금융 상태가 악화되는 특징이 있습니다. 특히 I 등급의 경우는 현금 흐름이 매우 낮아, 위기 시 부도 가능성이 높습니다. 하지만, 이러한 기업들도 특정 조건 하에 성장 가능성을 보여줄 수 있습니다. \n
+    E (하위 등급): 이 등급의 기업들은 점차 부채 상환 능력이 낮아지고 금융 상태가 악화되는 특징이 있습니다. 하지만, 이러한 기업들도 특정 조건 하에 성장 가능성을 보여줄 수 있습니다. \n
     """)    
 
     st.write("#### 실적 (Performance): [A+,A,B,C,D,E 中]")
@@ -379,7 +350,7 @@ if st.session_state.show_description:
     A+ (세계적 수준): 이 등급은 세계적인 수준의 기업을 나타내며, 국내에서는 삼성전자와 같은 기업이 해당됩니다. 이 기업들은 글로벌 시장에서도 높은 경쟁력을 보유하고 있습니다. \n
     A (우수 수준): 이 등급의 기업들은 매우 높은 매출과 이익률을 보유하고 있으며, 대부분의 영역에서 우수한 성과를 보여줍니다. \n
     B (평균 이상): 이 등급의 기업들은 주당 매출이 높으며, A 등급에 비해 EBITDA 마진이 약간 낮지만, 전반적으로 평균 이상의 성과를 보여줍니다. \n
-    C (미흡 수준): 이 등급의 기업들은 주당 매출이 낮으며, EBITDA 마진이 A 클래스보다 낮습니다. 그러나 일부 지표에서는 미흡하지 않은 성과를 보여줄 수 있습니다. \n
+    C (평균 수준): 이 등급의 기업들은 주당 매출이 낮으며, EBITDA 마진이 A 클래스보다 낮습니다. 그러나 일부 지표에서는 미흡하지 않은 성과를 보여줄 수 있습니다. \n
     """)    
 
     st.write("#### 변동성 (Volatility): [A+,A,B,C,D,E 中]")

@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import warnings
 import datetime as dt
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import sympy
 from pages import Sharpe
 from pages import Correlation
 from pages import Stock_Chatbot
@@ -26,7 +24,7 @@ if "page" not in st.session_state:
     st.session_state.page = "home"
 
 
-DATA_PATH = "/"
+DATA_PATH = "./"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -84,15 +82,35 @@ try:
             switch_page("Home")
     page3()
 
-
-    st.markdown(f'''투자 유형: :red[**{st.session_state.type_of_user}**]''')
-    st.markdown(f'''선택한 섹터 : :blue[**{st.session_state.selected_sectors}**]''')
-    st.markdown(f'''추천 주식 : :green[**{st.session_state.recommended_stocks}**]''')
+    st.markdown(f"""
+            <span style='font-size: 15px;'>
+            <div style=" color: #ff2a00;">
+                <strong>투자 유형: [{st.session_state.type_of_user}]</strong>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown(f"""
+            <span style='font-size: 15px;'>
+            <div style=" color: #145aa6;">
+                <strong>선택한 섹터: {st.session_state.selected_sectors}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown(f"""
+            <span style='font-size: 15px;'>
+            <div style=" color: #19a83b">
+                <strong>추천 주식: {st.session_state.recommended_stocks}</strong>
+            </div>
+            """, unsafe_allow_html=True)
 
 
     if len(st.session_state.recommended_stocks) >1:
 
-        st.write("이 중 기준으로 할 하나의 기업을 선택하세요.")
+        st.markdown(f"""
+            <span style='font-size: 20px;'>
+            <span style='font-weight: bold;'>
+            <div style="text-align: center; color: #151617;">
+                <strong>이 중 기준으로 할 하나의 기업을 선택하세요.</strong>
+            </div>
+            """, unsafe_allow_html=True)
 
         selected_result = st.selectbox('기준 선택', st.session_state.recommended_stocks ,help= '선택한 기업을 기준으로 상관계수가 낮은 순서대로 다른 기업들이 자동 선택됩니다.')
         if selected_result is not None:
@@ -106,7 +124,6 @@ try:
 
                 tmp=to_upward.get_close(data,st.session_state.recommended_stocks,start,end)
                 before_data = to_upward.get_close(data,st.session_state.recommended_stocks,start_03,end_03)
-                now_data = to_upward.get_close(data,st.session_state.recommended_stocks,start,end)
                 kospi200 = stock.get_index_ohlcv_by_date(start_03, end, "1028")['종가']
                 selected_result_sorted=tmp.corr()[[f'{selected_result}']].sort_values(by=f'{selected_result}')
                 mask = selected_result_sorted[f'{selected_result}']<1
@@ -114,7 +131,13 @@ try:
 
                 with col1:
 
-                    st.write('선택한 결과: ', selected_result)
+                    st.markdown(f"""
+                        <span style='font-size: 15px;'>
+                        <div style=" color: #151617">
+                            <strong>선택한 결과: {selected_result}</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                     st.write(mask_sorted)
 
                 if len(mask_sorted) >=5:
@@ -123,8 +146,13 @@ try:
                     stocks= list(mask_sorted.index)[0:]+[f"{selected_result}"]
 
                 with col2:
-
-                    st.write('상관계수 상위 기업과 선택한 기준:', stocks)
+                    st.markdown(f"""
+                        <span style='font-size: 15px;'>
+                        <div style=" color: #151617">
+                            <strong>상관계수 상위 기업과 선택한 기준:\n
+                                {stocks}
+                        </div>
+                        """, unsafe_allow_html=True)
                 st.divider()
 
                 daily_ret = tmp[stocks].pct_change()
@@ -136,15 +164,16 @@ try:
                         st.warning(f'연평균 수익률이 모두 음수인 업체이므로, 포트폴리오를 구성하기에 바람직하지 않습니다. 새롭게 sector를 선택해주세요.')
                     
                 else:
-                    max_shape,min_risk,tmp2,df=to_upward.get_portfolio(stocks,annual_ret,annual_cov)
+                    max_sharpe,min_risk,tmp2,df=to_upward.get_portfolio(stocks,annual_ret,annual_cov)
+
 
                     col3, col4= st.columns(2)
                     with col3:
-                        to_upward.show_CAPM(df, tmp2, max_shape, min_risk, rf=0.035)
+                        to_upward.show_CAPM(df, tmp2, max_sharpe, min_risk, rf=0.0325)
 
                     with col4:
                         st.write('최대 샤프 비율')
-                        st.dataframe(max_shape)
+                        st.dataframe(max_sharpe)
                         st.write('최소 리스크 비율')
                         st.dataframe(min_risk)
                         
@@ -152,26 +181,28 @@ try:
                     min_value= float(min_value)
                     max_value= (f"{200:.2f}")
                     max_value= float(max_value)
-                    max_return= (f"{100*max_shape['Returns'].iloc[0]:.2f}")
+                    max_return= (f"{100*max_sharpe['Returns'].iloc[0]:.2f}")
                     max_return = float(max_return)
+                    
                     exp_ret = st.slider("기대수익을 선택해주세요.", min_value, max_value, step=0.1,key="slider_corr") /100
                     col5, col6= st.columns(2)
                     with col5:
                         st.markdown(f'''위험 기피: :green[**기대수익 {min_value}% 이상 {max_return}% 미만입니다.**]''')
                         st.markdown(f'''중립: :orange[**기대수익 {max_return}% 입니다.**]''')
                         st.markdown(f'''위험 선호: :red[**기대수익 {max_return}% 초과 {max_value}% 이하입니다.**]''')
-
                     with col6:
                         if exp_ret*100 >= min_value and exp_ret*100 < max_return:
-                            st.image('위험기피.png', caption='당신은 안정형(위험기피형)입니다.', use_column_width=True)
+                            st.image('위험기피.png', caption='당신은 수익형(위험기피형)입니다.', use_column_width=True)
                         elif exp_ret*100 == max_return:
-                            st.image('중립.png', caption='당신은 안정형(중립형)입니다.', use_column_width=True)
+                            st.image('중립.png', caption='당신은 수익형(중립형)입니다.', use_column_width=True)
                         elif exp_ret*100 > max_return and exp_ret*100 <= max_value:
-                            st.image('위험선호.png', caption='당신은 안정형(위험선호형)입니다', use_column_width=True)
+                            st.image('위험선호.png', caption='당신은 수익형(위험선호형)입니다', use_column_width=True)
 
                     st.divider()
-                    fig, solution=to_upward.show_portfolio(max_shape,exp_ret)
-                    to_upward.show_portfolio2(fig, solution,max_shape)
+                    fig, solution= to_upward.show_portfolio(max_sharpe,exp_ret)
+                    st.plotly_chart(fig)
+                    st.success("위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.")
+
 
 
                     st.divider()
@@ -181,31 +212,32 @@ try:
                         tab1, tab2= st.tabs(['미래','과거'])
 
                         with tab1:
-                            st.text(f'몬테카를로 시뮬레이션은 불확실한 상황에서 수치적 예측을 수행하는 데 사용되는 통계적 방법입니다.\n이를 활용해 위의 포트폴리오로 투자했을 때 얼마의 수익을 얻을 수 있다고 가정할 수 있는지\n1000번의 시뮬레이션을 돌려 추후 5달간의 예측값을 상위 10%, 25%, 50%, 75%, 90%로 제시합니다.')
+                            st.text(f'몬테카를로 시뮬레이션은 불확실한 상황에서 수치적 예측을 수행하는 데 사용되는 통계적 방법입니다.\n이를 활용해 위의 포트폴리오로 투자했을 때 얼마의 수익을 얻을 수 있다고 가정할 수 있는지\n1000번의 시뮬레이션을 돌려 추후 5달간의 예측값을 백분위 10%, 25%, 50%, 75%, 90%로 제시해\n백분위 10%를 호황장, 25%를 상승장, 50%를 평년, 75%를 하락장, 90%를 불황장으로 가정해\n실제 값과 비교하여 제시합니다.')
                             sim_num=1000
                             balance = 1000000
-                            stock_money= max_shape[max_shape.columns[3:]]*balance
+                            stock_money= max_sharpe[max_sharpe.columns[3:]]*balance
                             balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,None,None,rf=0.0325)
+                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_sharpe,solution,None,None,rf=0.0325)
                             col7, col8= st.columns(2)
                             with col7:
                                 st.write(tmp3)
                             with col8:                 
-                                tmp4 = {'호황': [tmp3['호황'][4]*balance],
-                                        '상승': [tmp3['상승'][4]*balance],
-                                        '평년': [tmp3['평년'][4]*balance],
-                                        '하락': [tmp3['하락'][4]*balance],
-                                        '불황': [tmp3['불황'][4]*balance]}
+                                tmp4 = {'호황': [(tmp3['호황'][4]/100)*balance],
+                                        '상승': [(tmp3['상승'][4]/100)*balance],
+                                        '평년': [(tmp3['평년'][4]/100)*balance],
+                                        '하락': [(tmp3['하락'][4]/100)*balance],
+                                        '불황': [(tmp3['불황'][4]/100)*balance]}
 
                                 df4 = pd.DataFrame(tmp4)
 
-                                df4.index = ['예상']
-                                st.table(df4)
+                                df4.index = ['수익']
+                                st.table(df4.T)
 
                             st.write(px.line(tmp3))
+                            st.success("위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.")
                         
                         with tab2:
-                            st.text(f'몬테카를로 시뮬레이션은 불확실한 상황에서 수치적 예측을 수행하는 데 사용되는 통계적 방법입니다.\n이를 활용해 올해 3월로 돌아가 위의 포트폴리오로 투자했을 때 얼마의 수익을 얻었다고 할 수 있는지\n1000번의 시뮬레이션을 돌려 8월까지의 예측값을 상위 10%, 25%, 50%, 75%, 90%로 제시해 실제 값과 비교하여 제시합니다.')
+                            st.text(f'몬테카를로 시뮬레이션은 불확실한 상황에서 수치적 예측을 수행하는 데 사용되는 통계적 방법입니다.\n이를 활용해 올해 3월로 돌아가 위의 포트폴리오로 투자했을 때 얼마의 수익을 얻었다고 할 수 있는지\n1000번의 시뮬레이션을 돌려 8월까지의 예측값을 백분위 10%, 25%, 50%, 75%, 90%로 제시해\n백분위 10%를 호황장, 25%를 상승장, 50%를 평년, 75%를 하락장, 90%를 불황장으로 가정해\n실제 값과 비교하여 제시합니다.')
                             if len(mask_sorted) >=5:
                                 stocks = list(mask_sorted.index)[0:4]+[f"{selected_result}"]
                             elif len(mask_sorted) <5:
@@ -215,28 +247,30 @@ try:
                             daily_cov = daily_ret.cov()
                             annual_cov = daily_cov * before_data[stocks].shape[0]
                             rf = 0.0325
-                            max_shape,min_risk,tmp2,df = to_upward.get_portfolio(stocks,annual_ret,annual_cov)
+                            max_sharpe,min_risk,tmp2,df = to_upward.get_portfolio(stocks,annual_ret,annual_cov)
                             sim_num=1000
                             balance = 1000000
-                            stock_money= max_shape[max_shape.columns[3:]]*balance
+                            stock_money= max_sharpe[max_sharpe.columns[3:]]*balance
                             balance_df= to_upward.monte_sim(sim_num,tmp,stocks,stock_money)
-                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_shape,solution,now_data,kospi200,rf=0.0325)
+                            tmp3=to_upward.get_simret(balance_df,balance,before_data,stocks,max_sharpe,solution,tmp,kospi200,rf=0.0325)
                             col9, col10= st.columns(2)
                             with col9:
                                 st.write(tmp3)
                             with col10:
-                                tmp4 = {'호황': [tmp3['호황'][4]*balance],
-                                        '상승': [tmp3['상승'][4]*balance],
-                                        '평년': [tmp3['평년'][4]*balance],
-                                        '하락': [tmp3['하락'][4]*balance],
-                                        '불황': [tmp3['불황'][4]*balance]}
+                              
+                                tmp4 = {'호황': [(tmp3['호황'][4]/100)*balance],
+                                        '상승': [(tmp3['상승'][4]/100)*balance],
+                                        '평년': [(tmp3['평년'][4]/100)*balance],
+                                        '하락': [(tmp3['하락'][4]/100)*balance],
+                                        '불황': [(tmp3['불황'][4]/100)*balance]}
 
                                 df4 = pd.DataFrame(tmp4)
 
-                                df4.index = ['결과']
-                                st.table(df4)
+                                df4.index = ['수익']
+                                st.table(df4.T)
 
                             st.write(px.line(tmp3))
+                            st.success("위 그래프를 다운로드하려면, 그래프 우측 상단의 Download plot as a png 버튼을 클릭하세요.")
                             
 
 
