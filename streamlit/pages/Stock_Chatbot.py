@@ -17,7 +17,7 @@ if "page" not in st.session_state:
 
 
 
-DATA_PATH = "/"
+DATA_PATH = "./"
 
 # 데이터 불러오는 함수(캐싱)
 @st.cache_data(ttl=900)  # 캐싱 데코레이터
