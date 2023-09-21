@@ -290,7 +290,7 @@ try:
                                 st.markdown("변곡지점부터 100이상 지났습니다. 변곡지점이 가까우니 투자유의하시기바랍니다.")
                                 st.markdown(f"""과거 기록을 기준으로 보았을 때, 추세의 변곡점은 주로 추세시작일 기준 100일,200일 부근에서 발생했습니다. 참고하여 투자하시기 바랍니다.""")
                             
-                            elif (int((dt.datetime.now()- fig2.gca().lines[-1].get_xdata()[0]).days)>200) & (int((dt.datetime.now()- fig2.gca().lines[-1].get_xdata()[0]).days)<230):
+                            elif (int((dt.datetime.now()- fig2.gca().lines[-1].get_xdata()[0]).days)>200):
                                 if slope > 0:
                                     st.markdown(f"현재 추세의 기울기는 {slope:0.4f}로 [상승추세]입니다.")
                                 else:
