@@ -148,7 +148,7 @@ try:
                     st.markdown(f"""
                         <span style='font-size: 16px;'>
                         <div style="color: #151617">
-                            <strong>상관계수 상위 기업과 선택한 기준:<br>
+                            <strong>선택한 기업과 상관계수 상위 기업:<br>
                                 {'<br>'.join(stocks)}
                         </div>
                         """, unsafe_allow_html=True)

@@ -143,7 +143,7 @@ try:
                     st.markdown(f"""
                         <span style='font-size: 16px;'>
                         <div style="color: #151617">
-                            <strong>상관계수 상위 기업과 선택한 기준:<br>
+                            <strong>개별 sharpe 지수 상위 기업:<br>
                                 {'<br>'.join(stocks)}
                         </div>
                         """, unsafe_allow_html=True)
@@ -153,10 +153,23 @@ try:
                 max_sharpe,min_risk,tmp2,df=to_upward.get_portfolio(stocks,annual_ret,annual_cov)
                 with col3:
                     to_upward.show_CAPM(df, tmp2, max_sharpe, min_risk, rf=0.0325)
+ 
                 with col4:
-                    st.write('최대 샤프 비율')
+                    st.markdown(f"""
+                    <span style='font-size: 14px;'>
+                    <span style='font-weight: bold;'>
+                    <div style="text-align: center; color: #151617;">
+                        <strong>max_sharpe 포트폴리오: 리스크 한 단위당 수익률이 최대가 되는 전략</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.dataframe(max_sharpe)
-                    st.write('최소 리스크 비율')
+                    st.markdown(f"""
+                    <span style='font-size: 14px;'>
+                    <span style='font-weight: bold;'>
+                    <div style="text-align: center; color: #151617;">
+                        <strong>min_risk 포트폴리오: 투자자가 받아들일 수 있는 최소의 리스크 수준에서 포트폴리오를 구성하는 전략 </strong>
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.dataframe(min_risk)
 
                 min_value= (f"{4:.2f}")
