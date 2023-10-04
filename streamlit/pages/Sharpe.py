@@ -24,7 +24,7 @@ if "page" not in st.session_state:
     st.session_state.page = "home"
 
 
-DATA_PATH = "./"
+DATA_PATH = "C:/Users/Jonghyeon/Desktop/Final project/data/"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -189,11 +189,11 @@ try:
 
                 with col6:
                     if exp_ret*100 >= min_value and exp_ret*100 < max_return:
-                        st.image(f'Data analysis/위험기피.png', caption='당신은 수익형(위험기피형)입니다.', use_column_width=True)
+                        st.image(f'./위험기피.png', caption='당신은 수익형(위험기피형)입니다.', use_column_width=True)
                     elif exp_ret*100 == max_return:
-                        st.image(f'Data analysis/중립.png', caption='당신은 수익형(중립형)입니다.', use_column_width=True)
+                        st.image(f'./중립.png', caption='당신은 수익형(중립형)입니다.', use_column_width=True)
                     elif exp_ret*100 > max_return and exp_ret*100 <= max_value:
-                        st.image(f'Data analysis/위험선호.png', caption='당신은 수익형(위험선호형)입니다', use_column_width=True)
+                        st.image(f'./위험선호.png', caption='당신은 수익형(위험선호형)입니다', use_column_width=True)
 
 
                 st.divider()
@@ -293,7 +293,7 @@ try:
                         평년 (50% 백분위): 시뮬레이션 결과의 중간값 (평균적 시나리오) 
                         하락장 (75% 백분위): 시뮬레이션 결과 중 하위 25%에 해당하는 수익률
                         불황장 (90% 백분위): 시뮬레이션 결과 중 하위 10%에 해당하는 수익률 (최악 시나리오) \n
-                        몬테카를로 시뮬레이션을 사용하여 5달간의 포트폴리오 수익률을 예측합니다.
+                        몬테카를로 시뮬레이션을 사용하여 23년 3월부터 23년 8월까지의 포트폴리오 수익률을 확인합니다.
                         1000번의 시뮬레이션을 통해 다양한 시나리오(호황장, 상승장, 평년, 하락장, 불황장)의 수익률을 예측합니다.
                         시뮬레이션 결과를 실제 값과 비교하여, 포트폴리오 전략의 효과성을 평가합니다.
                         ''')

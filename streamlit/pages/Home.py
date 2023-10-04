@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(layout="wide")
 import pandas as pd
 import numpy as np
 import random
@@ -8,9 +9,8 @@ import warnings
 import datetime as dt
 from streamlit_extras.switch_page_button import switch_page
 from st_pages import Page, show_pages, add_page_title
+from streamlit_extras.colored_header import colored_header
 
-
-st.set_page_config(layout="wide")
 
 
 
@@ -35,7 +35,7 @@ if "page" not in st.session_state:
 
 
 
-DATA_PATH = "./"
+
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
@@ -44,7 +44,7 @@ def load_csv(path):
     return pd.read_csv(path)
 
 # 데이터 불러오기
-data = load_csv(f"{DATA_PATH}labeled_data_final2.csv")
+data = load_csv(f"./labeled_data_final2.csv")
 
 # 오류 방지를 위한 패딩 함수
 def pad_str(str_list, target_len):
@@ -71,11 +71,12 @@ start = (dt.datetime.today().date() - dt.timedelta(365)).strftime("%Y%m%d")
 all_stocks = data['Name'] # 전체 선택
 
 # pykrx에서 종가 데이터를 가져오는 함수
-@st.cache_data(ttl=900)  # 캐싱 데코레이터
+@st.cache_data # 캐싱 데코레이터
 def load_stock(start, end, data, all_stocks):
-    t = pd.DataFrame()
+    data_dict = {}
     for n in all_stocks:
-        t[n] = stock.get_market_ohlcv(start, end, data[data['Name'] == n]['Code'])['종가']
+        data_dict[n] = stock.get_market_ohlcv(start, end, data[data['Name'] == n]['Code'])['종가']
+    t = pd.DataFrame(data_dict)
     return t
 
 tmp = load_stock(start, end, data, all_stocks)
@@ -111,7 +112,11 @@ warnings.filterwarnings('ignore')
 
 
 # Survey Part
-st.title("우상향, 나의 투자 포트폴리오")
+colored_header(
+    label='우상향, 나의 투자 포트폴리오',
+    description=None,
+    color_name="blue-70",
+)
 
 
 
