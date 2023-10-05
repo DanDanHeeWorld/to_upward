@@ -22,7 +22,7 @@ if "page" not in st.session_state:
     st.session_state.page = "home"
 
 
-DATA_PATH = "C:/Users/Jonghyeon/Desktop/Final project/data/"
+DATA_PATH = "./"
 SEED = 42
 
 # 데이터 불러오는 함수(캐싱)
